@@ -1,31 +1,40 @@
-import psycopg2
+import os
 import requests
 from bs4 import BeautifulSoup
+import psycopg2
 from datetime import datetime
-import os
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def parse_1000things_wien():
     url = "https://www.1000thingsmagazine.com/de/at/wien/"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
-
+    print(f"[parse_1000things_wien] Парсим: {url}")
     response = requests.get(url, headers=headers)
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
-    news_items = []
-
     articles = soup.select("article[post-id]")
 
     print(f"[parse_1000things_wien] Найдено статей: {len(articles)}")
 
-    for article in articles:
-        title_tag = article.select_one("h2.card__title a")
-        if not title_tag:
+    news_items = []
+
+    for i, article in enumerate(articles, 1):
+        link_tag = article.select_one("a h3")
+        if not link_tag:
+            print(f"Статья #{i}: Заголовок не найден")
             continue
-        title = title_tag.get_text(strip=True)
-        link = title_tag.get("href")
+
+        a_tag = link_tag.find_parent("a")
+        if not a_tag:
+            print(f"Статья #{i}: Ссылка не найдена")
+            continue
+
+        title = ''.join(link_tag.stripped_strings)
+        link = a_tag.get("href")
         if link and not link.startswith("http"):
             link = "https://www.1000thingsmagazine.com" + link
 
@@ -34,14 +43,17 @@ def parse_1000things_wien():
             "link": link
         })
 
+    print(f"[parse_1000things_wien] Собрано статей: {len(news_items)}")
     return news_items
 
+
 def translate_title(title):
+    # Заглушка, тут можно вставить вызов OpenAI или любого переводчика
     print(f"[translate_title] Переводим: {title}")
     return title + " [RU]"
 
+
 def main():
-    DATABASE_URL = os.getenv("DATABASE_URL")
     if not DATABASE_URL:
         print("[main] Ошибка: DATABASE_URL не задана в переменных окружения!")
         return
@@ -49,6 +61,7 @@ def main():
     try:
         conn = psycopg2.connect(DATABASE_URL)
         c = conn.cursor()
+
         c.execute('''CREATE TABLE IF NOT EXISTS articles (
             id SERIAL PRIMARY KEY,
             title_de TEXT,
@@ -77,12 +90,13 @@ def main():
             print(f"[main] Добавлена статья: {title_de}")
 
         conn.commit()
+
     except Exception as e:
         print(f"[main] Ошибка: {e}")
     finally:
         if 'conn' in locals():
             conn.close()
-            print("[main] Соединение с базой закрыто.")
+
 
 if __name__ == "__main__":
     main()
