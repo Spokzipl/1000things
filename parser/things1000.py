@@ -34,6 +34,13 @@ def main():
     try:
         conn = psycopg2.connect(DATABASE_URL)
         c = conn.cursor()
+
+        # Вот добавленная проверка подключения
+        print("[main] Проверка соединения с базой...")
+        c.execute("SELECT version();")
+        version = c.fetchone()
+        print(f"[main] Версия Postgres: {version[0]}")
+
         print("[main] Создаём таблицу articles, если её нет...")
         c.execute('''CREATE TABLE IF NOT EXISTS articles (
             id SERIAL PRIMARY KEY,
