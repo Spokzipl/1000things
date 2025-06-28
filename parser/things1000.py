@@ -60,13 +60,17 @@ def main():
 
     try:
         conn = psycopg2.connect(DATABASE_URL)
+        
+        # Устанавливаем клиентскую кодировку UTF-8, чтобы правильно передавать и получать данные с БД
+        conn.set_client_encoding('UTF8')  # <--- вот здесь делаем установку кодировки
+        
         c = conn.cursor()
 
         c.execute('''CREATE TABLE IF NOT EXISTS articles (
             id SERIAL PRIMARY KEY,
             title_de TEXT,
             title_ru TEXT,
-            link TEXT UNIQUE,
+            link TEXT UNIQUE NOT NULL,
             date_added TIMESTAMP
         )''')
         conn.commit()
