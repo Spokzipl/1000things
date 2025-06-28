@@ -3,9 +3,10 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import openai
+import os
 
-openai.api_key = "YOUR_OPENAI_API_KEY"
-DATABASE_URL = "YOUR_RAILWAY_POSTGRES_URL"
+openai.api_key = os.getenv("OPENAI_API_KEY")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def parse_1000things_wien():
     # (оставляем код парсера без изменений)
