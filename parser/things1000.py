@@ -13,6 +13,7 @@ def parse_1000things_wien():
     }
     print(f"[parse_1000things_wien] Парсим: {url}")
     response = requests.get(url, headers=headers)
+    response.encoding = 'utf-8'  # <-- добавил фикс кодировки
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
