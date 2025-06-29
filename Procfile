@@ -1,1 +1,1 @@
-worker: python test_parser.py
+worker: python things1000.py
