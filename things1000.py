@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from bs4 import BeautifulSoup
 import psycopg2
@@ -74,9 +75,9 @@ def ensure_articles_table(cursor):
     ''')
 
 
-def main():
+def run_parser_once():
     if not DATABASE_URL:
-        print("[main] Ошибка: DATABASE_URL не задана в переменных окружения!")
+        print("[run_parser_once] Ошибка: DATABASE_URL не задана в переменных окружения!")
         return
 
     try:
@@ -86,7 +87,7 @@ def main():
 
         # Проверяем флаг активности в таблице settings
         if not should_run_script(c):
-            print("[main] Парсинг отключён через settings (enabled = false)")
+            print("[run_parser_once] Парсинг отключён через settings (enabled = false)")
             return
 
         ensure_articles_table(c)
@@ -100,7 +101,7 @@ def main():
 
             c.execute("SELECT id FROM articles_vienna WHERE link = %s", (link,))
             if c.fetchone():
-                print(f"[main] Статья уже в базе: {link}")
+                print(f"[run_parser_once] Статья уже в базе: {link}")
                 continue
 
             title_ru = translate_title(title_de)
@@ -108,16 +109,20 @@ def main():
                 INSERT INTO articles_vienna (title_de, title_ru, link, date_added)
                 VALUES (%s, %s, %s, %s)
             """, (title_de, title_ru, link, datetime.now()))
-            print(f"[main] Добавлена статья: {title_de}")
+            print(f"[run_parser_once] Добавлена статья: {title_de}")
 
         conn.commit()
 
     except Exception as e:
-        print(f"[main] Ошибка: {e}")
+        print(f"[run_parser_once] Ошибка: {e}")
     finally:
         if 'conn' in locals():
             conn.close()
 
 
 if __name__ == "__main__":
-    main()
+    while True:
+        print("\n[main] Запуск парсера...")
+        run_parser_once()
+        print("[main] Ожидание 1 час...\n")
+        time.sleep(120)  # Засыпаем на 1 час
