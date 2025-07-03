@@ -64,14 +64,20 @@ def should_run_script(cursor):
 
 
 def ensure_articles_table(cursor):
+    # Убедиться, что таблица есть (если вдруг не создана)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS articles_vienna (
             id SERIAL PRIMARY KEY,
             title_de TEXT,
             title_ru TEXT,
             link TEXT UNIQUE NOT NULL,
-            date_added TIMESTAMP
+            date_added TIMESTAMP,
+            skipped BOOLEAN DEFAULT FALSE
         )
+    ''')
+    # Добавить колонку skipped, если она ещё не существует
+    cursor.execute('''
+        ALTER TABLE articles_vienna ADD COLUMN IF NOT EXISTS skipped BOOLEAN DEFAULT FALSE
     ''')
 
 
@@ -106,9 +112,9 @@ def run_parser_once():
 
             title_ru = translate_title(title_de)
             c.execute("""
-                INSERT INTO articles_vienna (title_de, title_ru, link, date_added)
-                VALUES (%s, %s, %s, %s)
-            """, (title_de, title_ru, link, datetime.now()))
+                INSERT INTO articles_vienna (title_de, title_ru, link, date_added, skipped)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (title_de, title_ru, link, datetime.now(), False))
             print(f"[run_parser_once] Добавлена статья: {title_de}")
 
         conn.commit()
