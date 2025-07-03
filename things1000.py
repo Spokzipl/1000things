@@ -13,14 +13,13 @@ def parse_1000things_wien():
     }
     print(f"[parse_1000things_wien] Парсим: {url}")
     response = requests.get(url, headers=headers)
-    response.encoding = 'utf-8'  
+    response.encoding = 'utf-8'
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
     articles = soup.select("article[post-id]")
 
     print(f"[parse_1000things_wien] Найдено статей: {len(articles)}")
-
     news_items = []
 
     for i, article in enumerate(articles, 1):
@@ -50,7 +49,29 @@ def parse_1000things_wien():
 
 def translate_title(title):
     print(f"[translate_title] Переводим: {title}")
-    return title + " [RU]"
+    return title + " [RU]"  # Место для интеграции с переводчиком
+
+
+def should_run_script(cursor):
+    cursor.execute("""
+        SELECT enabled FROM settings
+        WHERE name = '1000things' AND city = 'Vienna'
+        LIMIT 1
+    """)
+    row = cursor.fetchone()
+    return row and row[0] is True
+
+
+def ensure_articles_table(cursor):
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS articles_vienna (
+            id SERIAL PRIMARY KEY,
+            title_de TEXT,
+            title_ru TEXT,
+            link TEXT UNIQUE NOT NULL,
+            date_added TIMESTAMP
+        )
+    ''')
 
 
 def main():
@@ -63,18 +84,12 @@ def main():
         conn.set_client_encoding('UTF8')
         c = conn.cursor()
 
-        # Удаляем таблицу, если она существует
-        c.execute("DROP TABLE IF EXISTS articles")
-        conn.commit()
+        # Проверяем флаг активности в таблице settings
+        if not should_run_script(c):
+            print("[main] Парсинг отключён через settings (enabled = false)")
+            return
 
-        # Создаём таблицу заново с новым именем
-        c.execute('''CREATE TABLE articles_vienna (
-            id SERIAL PRIMARY KEY,
-            title_de TEXT,
-            title_ru TEXT,
-            link TEXT UNIQUE NOT NULL,
-            date_added TIMESTAMP
-        )''')
+        ensure_articles_table(c)
         conn.commit()
 
         articles = parse_1000things_wien()
@@ -89,10 +104,10 @@ def main():
                 continue
 
             title_ru = translate_title(title_de)
-            c.execute(
-                "INSERT INTO articles_vienna (title_de, title_ru, link, date_added) VALUES (%s, %s, %s, %s)",
-                (title_de, title_ru, link, datetime.now())
-            )
+            c.execute("""
+                INSERT INTO articles_vienna (title_de, title_ru, link, date_added)
+                VALUES (%s, %s, %s, %s)
+            """, (title_de, title_ru, link, datetime.now()))
             print(f"[main] Добавлена статья: {title_de}")
 
         conn.commit()
