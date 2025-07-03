@@ -125,4 +125,4 @@ if __name__ == "__main__":
         print("\n[main] Запуск парсера...")
         run_parser_once()
         print("[main] Ожидание 1 час...\n")
-        time.sleep(120)  # Засыпаем на 1 час
+        time.sleep(3600)  # Засыпаем на 1 час
